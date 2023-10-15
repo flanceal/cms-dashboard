@@ -1,4 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
+from django.core.exceptions import ValidationError
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -42,19 +45,43 @@ class Product(models.Model):
 
 
 class Order(models.Model):
+    ORDER_STATUSES = (
+        ('created', 'CREATED'),
+        ('delivering', 'DELIVERING'),
+        ('completed', 'COMPLETED')
+    )
+
     customer = models.ForeignKey(CustomerModel, on_delete=models.DO_NOTHING)
     products = models.ManyToManyField(Product, through='OrderItem')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, blank=False)
     order_date = models.DateTimeField(auto_now_add=True, null=False, blank=True)
+    status = models.CharField(max_length=11, choices=ORDER_STATUSES, default='created')
 
     def __str__(self):
         return f"Order #{self.id}"
 
-    def calculate_total_price(self):
+    def save(self, *args, **kwargs):
+        # Check status of Order to be 'created' before setting total price, otherwise raises an Error
+        if self.status != 'created':
+            raise ValidationError('Order can not be modified if it is being Delivered or is Completed')
         total = sum([item.quantity * item.product.price for item in self.orderitem_set.all()])
+        self.total_price = total
+        super(Order, self).save(*args, **kwargs)
+
+    def delete(self, using=None, keep_parents=False):
+        if self.status != 'created':
+            raise ValidationError('Order can not be deleted if it is being Delivered or is Completed')
+        super().delete(using=using, keep_parents=keep_parents)
 
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+
+@receiver(pre_delete, sender=Order)
+def prevent_bulk_delete(sender, instance, **kwargs):
+    # Checks order's status to be 'created' before every delete and bulk delete, otherwise raises an error
+    if instance.status != 'created':
+        raise ValidationError('Order cannot be deleted if it is being Delivered or is Completed')
