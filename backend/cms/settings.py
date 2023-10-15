@@ -37,8 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # local
     'system_cms.apps.SystemCmsConfig',
+    # 3rd party
     'phonenumber_field',
+    'rest_framework'
 ]
 
 MIDDLEWARE = [
