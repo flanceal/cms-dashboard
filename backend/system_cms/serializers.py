@@ -8,7 +8,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomerModel
         fields = ['id', 'full_name', 'email', 'is_deleted']
-        read_only_fields = '__all__'
+        read_only_fields = ['__all__']
 
 
 # show specific customer data
@@ -34,7 +34,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductModel
         exclude = ['description']
-        read_only_fields = '__all__'
+        read_only_fields = ['__all__']
 
 
 # for showing specific product data, creating or updating product
@@ -50,7 +50,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderModel
         fields = ['id', 'customer_fullname', 'total_price', 'order_date']
-        read_only_fields = '__all__'
+        read_only_fields = ['__all__']
 
     def get_customer_fullname(self, obj):
         if obj.customer:
