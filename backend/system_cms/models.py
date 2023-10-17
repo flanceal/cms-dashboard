@@ -34,7 +34,7 @@ class CustomerModel(models.Model):
         return self.full_name
 
 
-class Product(models.Model):
+class ProductModel(models.Model):
     name = models.CharField(max_length=175, blank=False)
     description = models.TextField(max_length=500, null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
@@ -44,7 +44,7 @@ class Product(models.Model):
         return self.name
 
 
-class Order(models.Model):
+class OrderModel(models.Model):
     ORDER_STATUSES = (
         ('created', 'CREATED'),
         ('delivering', 'DELIVERING'),
@@ -52,7 +52,7 @@ class Order(models.Model):
     )
 
     customer = models.ForeignKey(CustomerModel, on_delete=models.DO_NOTHING)
-    products = models.ManyToManyField(Product, through='OrderItem')
+    products = models.ManyToManyField(ProductModel, through='OrderItem')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, blank=False)
     order_date = models.DateTimeField(auto_now_add=True, null=False, blank=True)
     status = models.CharField(max_length=11, choices=ORDER_STATUSES, default='created')
@@ -66,7 +66,7 @@ class Order(models.Model):
             raise ValidationError('Order can not be modified if it is being Delivered or is Completed')
         total = sum([item.quantity * item.product.price for item in self.orderitem_set.all()])
         self.total_price = total
-        super(Order, self).save(*args, **kwargs)
+        super(OrderModel, self).save(*args, **kwargs)
 
     def delete(self, using=None, keep_parents=False):
         if self.status != 'created':
@@ -75,12 +75,12 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    order = models.ForeignKey(OrderModel, on_delete=models.CASCADE)
+    product = models.ForeignKey(ProductModel, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
 
 
-@receiver(pre_delete, sender=Order)
+@receiver(pre_delete, sender=OrderModel)
 def prevent_bulk_delete(sender, instance, **kwargs):
     # Checks order's status to be 'created' before every delete and bulk delete, otherwise raises an error
     if instance.status != 'created':
