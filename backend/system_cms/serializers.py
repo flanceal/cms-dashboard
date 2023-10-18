@@ -49,7 +49,7 @@ class OrderListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderModel
-        fields = ['id', 'customer_fullname', 'total_price', 'order_date']
+        fields = ['id', 'customer_fullname', 'total_price', 'order_date', 'status']
         read_only_fields = ['__all__']
 
     def get_customer_fullname(self, obj):
@@ -58,35 +58,43 @@ class OrderListSerializer(serializers.ModelSerializer):
         return None
 
 
-class ProductIdAndNameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductModel
-        fields = ['id', 'name']
-
-
-class OrderItemSerializer(serializers.ModelSerializer):
-    product = ProductIdAndNameSerializer()
-
+class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ['product', 'quantity']
 
 
-class OrderDetailSerializer(serializers.ModelSerializer):
-    customer_fullname = serializers.SerializerMethodField()
-    items = OrderItemSerializer(source='orderitem_set', many=True)
+class OrderCreateSerializer(serializers.ModelSerializer):
+    items = OrderItemCreateSerializer(source='orderitem_set', many=True)
 
     class Meta:
         model = OrderModel
-        fields = ['id', 'customer_fullname', 'items', 'total_price', 'order_date', 'status']
+        fields = ['customer', 'items', 'status']
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('orderitem_set')
+        order = OrderModel.objects.create(**validated_data)
+        for item_data in items_data:
+            OrderItem.objects.create(order=order, **item_data)
+        return order
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    customer_fullname = serializers.SerializerMethodField()
+    customer_id = serializers.SerializerMethodField()
+    items = OrderItemCreateSerializer(source='orderitem_set', many=True, read_only=True)
+
+    class Meta:
+        model = OrderModel
+        fields = ['customer_fullname', 'customer_id', 'items', 'total_price', 'order_date', 'status']
+        read_only_fields = ['items', 'total_price', 'order_date']
 
     def get_customer_fullname(self, obj):
         if obj.customer:
             return obj.customer.full_name
         return None
 
-
-class OrderCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = OrderModel
-        exclude = ['total_price', 'order_date']
+    def get_customer_id(self, obj):
+        if obj.customer:
+            return obj.customer.id
+        return None

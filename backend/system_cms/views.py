@@ -38,3 +38,17 @@ class ProductListView(generics.ListCreateAPIView):
 class ProductRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ProductModel.objects.all()
     serializer_class = serializers.ProductDetailSerializer
+
+
+class OrderListView(generics.ListCreateAPIView):
+    queryset = OrderModel.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return serializers.OrderListSerializer
+        return serializers.OrderCreateSerializer
+
+
+class OrderRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = OrderModel.objects.all()
+    serializer_class = serializers.OrderDetailSerializer

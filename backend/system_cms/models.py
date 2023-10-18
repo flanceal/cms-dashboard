@@ -52,21 +52,13 @@ class OrderModel(models.Model):
     )
 
     customer = models.ForeignKey(CustomerModel, on_delete=models.DO_NOTHING)
-    products = models.ManyToManyField(ProductModel, through='OrderItem')
-    total_price = models.DecimalField(max_digits=10, decimal_places=2, blank=False)
+    products = models.ManyToManyField(ProductModel, through='OrderItem', null=True, blank=True)
+    total_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     order_date = models.DateTimeField(auto_now_add=True, null=False, blank=True)
     status = models.CharField(max_length=11, choices=ORDER_STATUSES, default='created')
 
     def __str__(self):
         return f"Order #{self.id}"
-
-    def save(self, *args, **kwargs):
-        # Check status of Order to be 'created' before setting total price, otherwise raises an Error
-        if self.status != 'created':
-            raise ValidationError('Order can not be modified if it is being Delivered or is Completed')
-        total = sum([item.quantity * item.product.price for item in self.orderitem_set.all()])
-        self.total_price = total
-        super(OrderModel, self).save(*args, **kwargs)
 
     def delete(self, using=None, keep_parents=False):
         if self.status != 'created':
@@ -78,6 +70,21 @@ class OrderItem(models.Model):
     order = models.ForeignKey(OrderModel, on_delete=models.CASCADE)
     product = models.ForeignKey(ProductModel, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+
+    def save(self, *args, **kwargs):
+        super(OrderItem, self).save(*args, **kwargs)  # Save the OrderItem first
+        self.update_order_total()
+
+    def delete(self, *args, **kwargs):
+        order = self.order
+        super(OrderItem, self).delete(*args, **kwargs)
+        order.refresh_from_db()
+        order.save()  # This will trigger the re-calculation of total
+
+    def update_order_total(self):
+        total = sum([item.quantity * item.product.price for item in self.order.orderitem_set.all()])
+        self.order.total_price = total
+        self.order.save()
 
 
 @receiver(pre_delete, sender=OrderModel)

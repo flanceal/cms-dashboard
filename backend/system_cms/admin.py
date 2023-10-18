@@ -18,11 +18,19 @@ class ProductModelAdmin(admin.ModelAdmin):
     pass
 
 
+class OrderItemInline(admin.TabularInline):
+    model = OrderItem
+    extra = 0
+
+
 @admin.register(OrderModel)
 class OrderModelAdmin(admin.ModelAdmin):
-    pass
+    inlines = [OrderItemInline]
+    fields = ['customer', 'status', 'total_price', 'order_date']
+    readonly_fields = ['total_price', 'order_date']
 
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
     pass
+
