@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'system_cms.apps.SystemCmsConfig',
     # 3rd party
     'phonenumber_field',
-    'rest_framework'
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -141,3 +142,12 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'system_cms.CustomUserModel'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+}
+
+AUTHENTICATION_BACKENDS = ['system_cms.backends.EmailBackend']
+
